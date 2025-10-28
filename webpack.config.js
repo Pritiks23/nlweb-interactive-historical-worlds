@@ -1,13 +1,17 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-module.exports = {
-  entry: './src/app.tsx',
-  output: {
-    path: path.resolve(__dirname, 'dist'),
-    filename: 'bundle.js',
-    clean: true,
-  },
+module.exports = (env, argv) => {
+  const isProduction = argv.mode === 'production';
+  
+  return {
+    entry: './src/app.tsx',
+    output: {
+      path: path.resolve(__dirname, 'dist'),
+      filename: 'bundle.js',
+      clean: true,
+      publicPath: isProduction ? '/nlweb-interactive-historical-worlds/' : '/',
+    },
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
   },
@@ -30,13 +34,14 @@ module.exports = {
       filename: 'index.html',
     }),
   ],
-  devServer: {
-    static: {
-      directory: path.join(__dirname, 'dist'),
+    devServer: {
+      static: {
+        directory: path.join(__dirname, 'dist'),
+      },
+      compress: true,
+      port: 3000,
+      open: true,
+      hot: true,
     },
-    compress: true,
-    port: 3000,
-    open: true,
-    hot: true,
-  },
+  };
 };
