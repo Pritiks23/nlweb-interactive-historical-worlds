@@ -66,6 +66,8 @@ const WorldViewer: React.FC<WorldViewerProps> = ({ worlds, regions }) => {
     const [selectedWorld, setSelectedWorld] = useState<World | null>(worlds[0] || null);
     const [expandedRegion, setExpandedRegion] = useState<string | null>(null);
     const [showNLWEBAnalysis, setShowNLWEBAnalysis] = useState<string | null>(null);
+    const [isPlaying, setIsPlaying] = useState<string | null>(null);
+    const [voicesLoaded, setVoicesLoaded] = useState(false);
     
     // Initialize Microsoft NLWEB processor
     const [nlwebProcessor] = useState(() => new NLWEBProcessor({
@@ -74,15 +76,46 @@ const WorldViewer: React.FC<WorldViewerProps> = ({ worlds, regions }) => {
         naturalLanguageProcessing: true
     }));
 
+    // Load voices for better cinematic narration
+    React.useEffect(() => {
+        if ('speechSynthesis' in window) {
+            const loadVoices = () => {
+                const voices = window.speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    setVoicesLoaded(true);
+                    console.log('🎬 Available cinematic voices:', voices.filter(v => v.lang.includes('en')).map(v => v.name));
+                }
+            };
+            
+            loadVoices();
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+    }, []);
+
     const handleWorldSelect = (world: World) => {
+        // Stop any playing narration
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
+        setIsPlaying(null);
+        
         setSelectedWorld(world);
         setExpandedRegion(null);
         setShowNLWEBAnalysis(null);
     };
 
     const handleRegionClick = (regionId: string) => {
-        setExpandedRegion(expandedRegion === regionId ? null : regionId);
-        if (expandedRegion !== regionId) {
+        // Stop any playing narration when switching regions
+        if (expandedRegion !== regionId && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            setIsPlaying(null);
+        }
+        
+        if (expandedRegion === regionId) {
+            setExpandedRegion(null);
+            setShowNLWEBAnalysis(null);
+        } else {
+            setExpandedRegion(regionId);
             setShowNLWEBAnalysis(null);
         }
     };
@@ -108,6 +141,136 @@ const WorldViewer: React.FC<WorldViewerProps> = ({ worlds, regions }) => {
         
         const nlwebData = getNLWEBAnalysis(region);
         return nlwebData?.enrichedContent || region.description;
+    };
+
+    // Immersive Experience Generator - Cinematic narrator-style content
+    const createImmersiveExperience = (region: Region) => {
+        const experiences = {
+            atmosphere: [
+                "✨ Through the mists of time, you emerge into a world long forgotten... The portal's energy fades behind you as ancient history comes alive...",
+                "🌅 The veil between past and present dissolves... You find yourself standing where legends once walked and empires rose and fell...", 
+                "🔮 Time itself bends to your will as you step across the threshold... The echoes of civilizations past whisper their secrets to you...",
+                "⚡ Lightning flashes across dimensions as you cross into the heart of history... The very ground beneath your feet trembles with the weight of ages..."
+            ],
+            sensory: [
+                "👂 Listen... Do you hear it? The distant echoes of voices that once shaped the world... The sounds of an age that time forgot",
+                "👃 Breathe deeply... The air itself tells a story... Ancient fires, exotic spices, and the unmistakable scent of human ambition", 
+                "👁️ Look around you... Witness the grandeur that once was... Architecture that defied the limits of its time, now stands before you in all its glory",
+                "🤚 Reach out and touch the past... Feel the weathered stones that witnessed history, the silk that adorned emperors, the tools that built civilizations"
+            ],
+            transitions: [
+                "As our journey through time continues, the tapestry of history unfolds before us...",
+                "Deeper into the shadows of the past we venture, where truth and legend intertwine...", 
+                "The chronicles of ages past reveal themselves as we walk among the ghosts of greatness...",
+                "Through the corridors of time, we discover the magnificent truth that..."
+            ]
+        };
+
+        const randomAtmosphere = experiences.atmosphere[Math.floor(Math.random() * experiences.atmosphere.length)];
+        const randomSensory = experiences.sensory[Math.floor(Math.random() * experiences.sensory.length)];
+        const randomTransition = experiences.transitions[Math.floor(Math.random() * experiences.transitions.length)];
+        
+        // Transform the existing description into cinematic storytelling
+        const originalText = region.description;
+        const sentences = originalText.split('. ');
+        
+        return `${randomAtmosphere}
+
+🌍 **Chapter One: The Realm of ${region.name}**
+
+${randomSensory}... Here, in this sacred place, ${sentences[0].toLowerCase()}...
+
+${randomTransition} ${sentences.slice(1, 4).join('. ')}.
+
+And so the legend continues... ${sentences.slice(4).join('. ')}
+
+*Press play to hear this tale narrated in the voice of a master storyteller... Let the chronicles of ${region.name} unfold before you...*`;
+    };
+
+    // Text-to-Speech Narration Function - Cinematic Narrator Voice
+    const speakExperience = (region: Region) => {
+        if ('speechSynthesis' in window) {
+            // If already playing this region, stop it
+            if (isPlaying === region.id) {
+                window.speechSynthesis.cancel();
+                setIsPlaying(null);
+                return;
+            }
+            
+            // Stop any ongoing speech
+            window.speechSynthesis.cancel();
+            setIsPlaying(region.id);
+            
+            // Create the narrative text with dramatic pauses
+            const narrative = createImmersiveExperience(region)
+                .replace(/\*\*(.*?)\*\*/g, '$1') // Remove markdown bold
+                .replace(/[✨🌅🔮⚡👂👃👁️🤚🌍]/g, '') // Remove emojis
+                .replace(/\*/g, '') // Remove remaining markdown
+                .replace(/\.\.\./g, '... ') // Add pauses for dramatic effect
+                .replace(/:/g, ': ') // Pause after colons
+                .replace(/;/g, '; '); // Pause after semicolons
+            
+            const utterance = new SpeechSynthesisUtterance(narrative);
+            
+            // Cinematic narrator settings
+            utterance.rate = 0.75; // Slower, more dramatic pace
+            utterance.pitch = 0.85; // Slightly deeper, more authoritative
+            utterance.volume = 0.9; // Higher volume for impact
+            
+            // Find the most cinematic voice available
+            const voices = window.speechSynthesis.getVoices();
+            
+            // Priority order for cinematic voices
+            const cinematicVoiceNames = [
+                'Alex', // macOS premium voice
+                'Daniel (Enhanced)', // Windows premium
+                'Google UK English Male', // Deep, authoritative
+                'Microsoft David', // Clear, dramatic
+                'Karen', // Professional narrator
+                'Moira', // Irish dramatic
+                'Rishi', // Indian English with gravitas
+                'Tessa', // South African dramatic
+                'Arthur', // British dramatic
+                'Bruce', // Australian dramatic
+            ];
+            
+            // Try to find the best cinematic voice
+            let cinematicVoice = null;
+            
+            for (const voiceName of cinematicVoiceNames) {
+                cinematicVoice = voices.find(voice => 
+                    voice.name.includes(voiceName) ||
+                    voice.name.toLowerCase().includes(voiceName.toLowerCase())
+                );
+                if (cinematicVoice) break;
+            }
+            
+            // If no specific cinematic voice found, look for characteristics
+            if (!cinematicVoice) {
+                cinematicVoice = voices.find(voice => 
+                    (voice.name.includes('Male') && voice.lang.includes('en')) ||
+                    (voice.name.includes('Enhanced') && voice.lang.includes('en')) ||
+                    (voice.name.includes('Premium') && voice.lang.includes('en')) ||
+                    (voice.name.includes('Natural') && voice.lang.includes('en'))
+                ) || voices.find(voice => voice.lang.includes('en') && voice.default);
+            }
+            
+            if (cinematicVoice) {
+                utterance.voice = cinematicVoice;
+                console.log(`🎬 Using cinematic narrator voice: ${cinematicVoice.name}`);
+            }
+            
+            // Handle speech end
+            utterance.onend = () => {
+                setIsPlaying(null);
+            };
+            
+            utterance.onerror = () => {
+                setIsPlaying(null);
+            };
+            
+            window.speechSynthesis.speak(utterance);
+        }
     };
 
     return (
@@ -158,23 +321,37 @@ const WorldViewer: React.FC<WorldViewerProps> = ({ worlds, regions }) => {
                                     </div>
                                     
                                     <div className="region-content">
-                                        <div className="region-preview">
-                                            {region.description.substring(0, 100)}...
+                                        <div className="region-preview portal-entrance">
+                                            🌟 Click to enter the portal to {region.name}...
                                         </div>
                                         
                                         {expandedRegion === region.id && (
-                                            <div className="region-details">
-                                                <div className="region-full-description">
+                                            <div className="region-details immersive-world">
+                                                <div className="immersive-experience">
                                                     <div 
                                                         dangerouslySetInnerHTML={{ 
-                                                            __html: enhanceWithNLWEB(region).replace(
-                                                                /<nlweb:([^>]+)>/g, 
-                                                                '<span class="nlweb-enhanced">').replace(
+                                                            __html: createImmersiveExperience(region).replace(
+                                                                /\*\*(.*?)\*\*/g, 
+                                                                '<strong class="story-highlight">$1</strong>').replace(
                                                                 /<\/nlweb:[^>]*>/g, 
                                                                 '</span>'
                                                             )
                                                         }} 
                                                     />
+                                                    
+                                                    <div className="experience-controls">
+                                                        <button 
+                                                            className={`play-narration-btn ${isPlaying === region.id ? 'playing' : ''}`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                speakExperience(region);
+                                                            }}
+                                                            title={isPlaying === region.id ? "Stop cinematic narration" : "Listen with cinematic narrator voice"}
+                                                        >
+                                                            {isPlaying === region.id ? '⏹️ Stop Cinematic Narration' : '� Play Cinematic Narration'}
+                                                        </button>
+                                                    </div>
+                                                    
                                                     <div 
                                                         className="nlweb-badge clickable"
                                                         onClick={(e) => {
