@@ -1,0 +1,39 @@
+{
+  "name": "nlweb-project",
+  "version": "1.0.0",
+  "description": "An interactive application that explores different time periods in various regions.",
+  "main": "src/app.ts",
+  "scripts": {
+    "start": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "build-ts": "tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.2",
+    "@types/react-dom": "^17.0.2",
+    "@types/jest": "^27.0.2",
+    "typescript": "^4.4.4",
+    "ts-node": "^10.4.0",
+    "jest": "^27.0.6",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0",
+    "webpack-dev-server": "^4.15.0",
+    "ts-loader": "^9.4.0",
+    "css-loader": "^6.8.0",
+    "style-loader": "^3.3.0",
+    "html-webpack-plugin": "^5.5.0"
+  },
+  "keywords": [
+    "interactive",
+    "worlds",
+    "time periods",
+    "regions"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
